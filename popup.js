@@ -1,4 +1,14 @@
 document.addEventListener('DOMContentLoaded', () => {
+  const logContainer = document.getElementById('log-container');
+  function log(message) {
+    const p = document.createElement('p');
+    p.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+    logContainer.appendChild(p);
+    logContainer.scrollTop = logContainer.scrollHeight;
+  }
+
+  log('Popup script loaded.');
+
   const passwordForm = document.getElementById('passwordForm');
   const passwordList = document.getElementById('passwordList');
   const nameInput = document.getElementById('name');
@@ -108,89 +118,59 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   function fillPassword(index) {
-    console.log(`[Popup] Fill button clicked for index: ${index}`);
+    log(`Fill button clicked for index: ${index}`);
     chrome.storage.sync.get({ passwords: [] }, (data) => {
       const entry = data.passwords[index];
       if (entry) {
-        console.log('[Popup] Found entry:', entry);
+        log('Found entry: ' + JSON.stringify(entry));
         chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
           if (tabs.length === 0) {
-            console.error('[Popup] No active tab found.');
+            log('ERROR: No active tab found.');
             return;
           }
           const tabId = tabs[0].id;
-          console.log(`[Popup] Active tab found: ${tabId}`);
+          log(`Active tab found: ${tabId}`);
 
           let totpCode = '';
           if (entry.twoFactorSecret) {
             const totp = new TOTP(entry.twoFactorSecret);
             totpCode = totp.generate();
-            console.log(`[Popup] Generated TOTP code: ${totpCode}`);
+            log(`Generated TOTP code: ${totpCode}`);
           }
 
-          console.log('[Popup] Executing script...');
+          log('Executing script...');
           chrome.scripting.executeScript({
             target: { tabId: tabId },
             func: (username, password, code) => {
-              console.log('--- Password Fill Script Executing ---');
-              console.log('Attempting to fill with:', { username, password, code });
-
-              // Specific selectors for dev-camp-admin.mce.sg
+              // This function runs in the context of the web page, so it cannot use the 'log' function from the popup.
+              // We will rely on the popup logs to see if this script is injected.
               if (window.location.hostname === 'dev-camp-admin.mce.sg') {
-                console.log('Site detected: dev-camp-admin.mce.sg');
                 const usernameField = document.querySelector('input[placeholder="Enter email address"]');
                 const passwordField = document.querySelector('input[placeholder="Enter password"]');
                 const twoFactorField = document.querySelector('input[placeholder="Enter 2FA Verification Code"]');
-                
-                console.log('Fields found:', { usernameField, passwordField, twoFactorField });
-
-                if (usernameField) {
-                  usernameField.value = username;
-                  console.log('Username field filled.');
-                }
-                if (passwordField) {
-                  passwordField.value = password;
-                  console.log('Password field filled.');
-                }
-                if (twoFactorField && code) {
-                  twoFactorField.value = code;
-                  console.log('2FA field filled.');
-                }
+                if (usernameField) usernameField.value = username;
+                if (passwordField) passwordField.value = password;
+                if (twoFactorField && code) twoFactorField.value = code;
               } else {
-                console.log('Using generic selectors for site:', window.location.hostname);
-                // Generic selectors for other sites
                 const usernameField = document.querySelector('input[name="username"], input[name="email"], input[autocomplete="username"]');
                 const passwordField = document.querySelector('input[type="password"], input[name="password"]');
                 const twoFactorField = document.querySelector('input[name="2fa"], input[name="one-time-code"], input[name="totp"]');
-
-                console.log('Fields found:', { usernameField, passwordField, twoFactorField });
-
-                if (usernameField) {
-                  usernameField.value = username;
-                  console.log('Username field filled.');
-                }
-                if (passwordField) {
-                  passwordField.value = password;
-                  console.log('Password field filled.');
-                }
-                if (twoFactorField && code) {
-                  twoFactorField.value = code;
-                  console.log('2FA field filled.');
-                }
+                if (usernameField) usernameField.value = username;
+                if (passwordField) passwordField.value = password;
+                if (twoFactorField && code) twoFactorField.value = code;
               }
-              console.log('--- Script Finished ---');
             },
             args: [entry.username, entry.password, totpCode]
           }, () => {
             if (chrome.runtime.lastError) {
-              console.error(`[Popup] Script injection failed: ${chrome.runtime.lastError.message}`);
+              log(`ERROR: Script injection failed: ${chrome.runtime.lastError.message}`);
             } else {
-              console.log('[Popup] Script injected successfully.');
+              log('Script injected successfully.');
             }
           });
         });
       } else {
-        console.error(`[Popup] No entry found for index: ${index}`);
+        log(`ERROR: No entry found for index: ${index}`);
       }
     });
   }
