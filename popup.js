@@ -93,6 +93,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   passwordList.addEventListener('click', (e) => {
+
     const target = e.target;
     if (target.classList.contains('delete-btn')) {
       const index = target.getAttribute('data-index');
@@ -195,6 +196,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function startEdit(index) {
+
     chrome.storage.sync.get({ passwords: [] }, (data) => {
       const entry = data.passwords[index];
       if (entry) {
