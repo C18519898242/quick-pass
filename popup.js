@@ -13,7 +13,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const passwordForm = document.getElementById('passwordForm');
   const addNewBtn = document.getElementById('add-new-modal-btn');
   const closeBtn = document.querySelector('.close-btn');
+  const modalTitle = document.getElementById('modal-title');
   const passwordList = document.getElementById('passwordList');
+  const filterInput = document.getElementById('filter-input');
   const environmentInput = document.getElementById('environment');
   const urlInput = document.getElementById('url');
   const usernameInput = document.getElementById('username');
@@ -38,6 +40,7 @@ document.addEventListener('DOMContentLoaded', () => {
   addNewBtn.addEventListener('click', () => {
     editingIndex = null;
     passwordForm.reset();
+    modalTitle.textContent = 'Add New Entry';
     submitButton.textContent = 'Save';
     openModal();
   });
@@ -71,6 +74,10 @@ document.addEventListener('DOMContentLoaded', () => {
   // Load saved passwords
   loadPasswords(currentPage);
 
+  filterInput.addEventListener('input', () => {
+    loadPasswords(1, filterInput.value);
+  });
+
   passwordForm.addEventListener('submit', (e) => {
     e.preventDefault();
     const environment = environmentInput.value;
@@ -103,7 +110,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const passwords = data.passwords;
       passwords[index] = entry;
       chrome.storage.sync.set({ passwords }, () => {
-        loadPasswords();
+        loadPasswords(currentPage, filterInput.value);
       });
     });
   }
@@ -113,23 +120,27 @@ document.addEventListener('DOMContentLoaded', () => {
       const passwords = data.passwords;
       passwords.push(entry);
       chrome.storage.sync.set({ passwords }, () => {
-        loadPasswords();
+        loadPasswords(1, filterInput.value);
       });
     });
   }
 
-  function loadPasswords(page = 1) {
+  function loadPasswords(page = 1, filter = '') {
     chrome.storage.sync.get({ passwords: [] }, (data) => {
       passwordList.innerHTML = '';
-      const passwords = data.passwords;
+      
+      const filteredPasswords = data.passwords.filter(p => 
+        p.environment.toLowerCase().includes(filter.toLowerCase())
+      );
+
       currentPage = page;
 
       const start = (currentPage - 1) * itemsPerPage;
       const end = start + itemsPerPage;
-      const paginatedItems = passwords.slice(start, end);
+      const paginatedItems = filteredPasswords.slice(start, end);
 
       paginatedItems.forEach((entry) => {
-        const originalIndex = passwords.indexOf(entry);
+        const originalIndex = data.passwords.indexOf(entry);
         const li = document.createElement('li');
         const roleDisplay = entry.role ? ` [${entry.role}]` : '';
         li.innerHTML = `
@@ -145,7 +156,7 @@ document.addEventListener('DOMContentLoaded', () => {
         passwordList.appendChild(li);
       });
 
-      renderPagination(passwords.length);
+      renderPagination(filteredPasswords.length);
     });
   }
 
@@ -156,11 +167,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (totalPages <= 1) return;
 
     const prevButton = document.createElement('button');
-    prevButton.textContent = 'Previous';
+    prevButton.textContent = '<';
     prevButton.disabled = currentPage === 1;
     prevButton.addEventListener('click', () => {
       if (currentPage > 1) {
-        loadPasswords(currentPage - 1);
+        loadPasswords(currentPage - 1, filterInput.value);
       }
     });
     paginationContainer.appendChild(prevButton);
@@ -170,11 +181,11 @@ document.addEventListener('DOMContentLoaded', () => {
     paginationContainer.appendChild(pageInfo);
 
     const nextButton = document.createElement('button');
-    nextButton.textContent = 'Next';
+    nextButton.textContent = '>';
     nextButton.disabled = currentPage === totalPages;
     nextButton.addEventListener('click', () => {
       if (currentPage < totalPages) {
-        loadPasswords(currentPage + 1);
+        loadPasswords(currentPage + 1, filterInput.value);
       }
     });
     paginationContainer.appendChild(nextButton);
@@ -279,6 +290,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function startEdit(index) {
     openModal();
+    modalTitle.textContent = 'Edit Entry';
     chrome.storage.sync.get({ passwords: [] }, (data) => {
       const entry = data.passwords[index];
       if (entry) {
@@ -300,7 +312,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const passwords = data.passwords;
       passwords.splice(index, 1);
       chrome.storage.sync.set({ passwords }, () => {
-        loadPasswords();
+        loadPasswords(1, filterInput.value);
       });
     });
   }
