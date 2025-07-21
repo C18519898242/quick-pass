@@ -120,25 +120,53 @@ document.addEventListener('DOMContentLoaded', () => {
           chrome.scripting.executeScript({
             target: { tabId: tabs[0].id },
             func: (username, password, code) => {
+              console.log('--- Password Fill Script Executing ---');
+              console.log('Attempting to fill with:', { username, password, code });
+
               // Specific selectors for dev-camp-admin.mce.sg
               if (window.location.hostname === 'dev-camp-admin.mce.sg') {
+                console.log('Site detected: dev-camp-admin.mce.sg');
                 const usernameField = document.querySelector('input[placeholder="Enter email address"]');
                 const passwordField = document.querySelector('input[placeholder="Enter password"]');
                 const twoFactorField = document.querySelector('input[placeholder="Enter 2FA Verification Code"]');
                 
-                if (usernameField) usernameField.value = username;
-                if (passwordField) passwordField.value = password;
-                if (twoFactorField && code) twoFactorField.value = code;
+                console.log('Fields found:', { usernameField, passwordField, twoFactorField });
+
+                if (usernameField) {
+                  usernameField.value = username;
+                  console.log('Username field filled.');
+                }
+                if (passwordField) {
+                  passwordField.value = password;
+                  console.log('Password field filled.');
+                }
+                if (twoFactorField && code) {
+                  twoFactorField.value = code;
+                  console.log('2FA field filled.');
+                }
               } else {
+                console.log('Using generic selectors for site:', window.location.hostname);
                 // Generic selectors for other sites
                 const usernameField = document.querySelector('input[name="username"], input[name="email"], input[autocomplete="username"]');
                 const passwordField = document.querySelector('input[type="password"], input[name="password"]');
                 const twoFactorField = document.querySelector('input[name="2fa"], input[name="one-time-code"], input[name="totp"]');
 
-                if (usernameField) usernameField.value = username;
-                if (passwordField) passwordField.value = password;
-                if (twoFactorField && code) twoFactorField.value = code;
+                console.log('Fields found:', { usernameField, passwordField, twoFactorField });
+
+                if (usernameField) {
+                  usernameField.value = username;
+                  console.log('Username field filled.');
+                }
+                if (passwordField) {
+                  passwordField.value = password;
+                  console.log('Password field filled.');
+                }
+                if (twoFactorField && code) {
+                  twoFactorField.value = code;
+                  console.log('2FA field filled.');
+                }
               }
+              console.log('--- Script Finished ---');
             },
             args: [entry.username, entry.password, totpCode]
           });
