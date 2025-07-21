@@ -120,24 +120,25 @@ document.addEventListener('DOMContentLoaded', () => {
           chrome.scripting.executeScript({
             target: { tabId: tabs[0].id },
             func: (username, password, code) => {
-              // Generic selectors
-              let usernameField = document.querySelector('input[name="username"], input[name="email"], input[autocomplete="username"]');
-              let passwordField = document.querySelector('input[type="password"], input[name="password"]');
-              let twoFactorField = document.querySelector('input[name="2fa"], input[name="one-time-code"], input[name="totp"]');
-
               // Specific selectors for dev-camp-admin.mce.sg
               if (window.location.hostname === 'dev-camp-admin.mce.sg') {
-                const inputs = document.querySelectorAll('input');
-                if(inputs.length >= 3) {
-                  usernameField = inputs[0];
-                  passwordField = inputs[1];
-                  twoFactorField = inputs[2];
-                }
+                const usernameField = document.querySelector('input[placeholder="Enter email address"]');
+                const passwordField = document.querySelector('input[placeholder="Enter password"]');
+                const twoFactorField = document.querySelector('input[placeholder="Enter 2FA Verification Code"]');
+                
+                if (usernameField) usernameField.value = username;
+                if (passwordField) passwordField.value = password;
+                if (twoFactorField && code) twoFactorField.value = code;
+              } else {
+                // Generic selectors for other sites
+                const usernameField = document.querySelector('input[name="username"], input[name="email"], input[autocomplete="username"]');
+                const passwordField = document.querySelector('input[type="password"], input[name="password"]');
+                const twoFactorField = document.querySelector('input[name="2fa"], input[name="one-time-code"], input[name="totp"]');
+
+                if (usernameField) usernameField.value = username;
+                if (passwordField) passwordField.value = password;
+                if (twoFactorField && code) twoFactorField.value = code;
               }
-              
-              if (usernameField) usernameField.value = username;
-              if (passwordField) passwordField.value = password;
-              if (twoFactorField && code) twoFactorField.value = code;
             },
             args: [entry.username, entry.password, totpCode]
           });
