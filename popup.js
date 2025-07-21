@@ -111,15 +111,35 @@ document.addEventListener('DOMContentLoaded', () => {
       const entry = data.passwords[index];
       if (entry) {
         chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+          let totpCode = '';
+          if (entry.twoFactorSecret) {
+            const totp = new TOTP(entry.twoFactorSecret);
+            totpCode = totp.generate();
+          }
+
           chrome.scripting.executeScript({
             target: { tabId: tabs[0].id },
-            func: (username, password) => {
-              const usernameField = document.querySelector('input[type="text"], input[type="email"], input:not([type])');
-              const passwordField = document.querySelector('input[type="password"]');
+            func: (username, password, code) => {
+              // Generic selectors
+              let usernameField = document.querySelector('input[name="username"], input[name="email"], input[autocomplete="username"]');
+              let passwordField = document.querySelector('input[type="password"], input[name="password"]');
+              let twoFactorField = document.querySelector('input[name="2fa"], input[name="one-time-code"], input[name="totp"]');
+
+              // Specific selectors for dev-camp-admin.mce.sg
+              if (window.location.hostname === 'dev-camp-admin.mce.sg') {
+                const inputs = document.querySelectorAll('input');
+                if(inputs.length >= 3) {
+                  usernameField = inputs[0];
+                  passwordField = inputs[1];
+                  twoFactorField = inputs[2];
+                }
+              }
+              
               if (usernameField) usernameField.value = username;
               if (passwordField) passwordField.value = password;
+              if (twoFactorField && code) twoFactorField.value = code;
             },
-            args: [entry.username, entry.password]
+            args: [entry.username, entry.password, totpCode]
           });
         });
       }
