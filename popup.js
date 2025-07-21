@@ -142,22 +142,32 @@ document.addEventListener('DOMContentLoaded', () => {
           chrome.scripting.executeScript({
             target: { tabId: tabId },
             func: (username, password, code) => {
-              // This function runs in the context of the web page, so it cannot use the 'log' function from the popup.
-              // We will rely on the popup logs to see if this script is injected.
+              function fillField(element, value) {
+                if (element) {
+                  element.focus();
+                  element.value = value;
+                  element.dispatchEvent(new Event('input', { bubbles: true }));
+                  element.dispatchEvent(new Event('change', { bubbles: true }));
+                  element.blur();
+                }
+              }
+
               if (window.location.hostname === 'dev-camp-admin.mce.sg') {
                 const usernameField = document.querySelector('input[placeholder="Enter email address"]');
                 const passwordField = document.querySelector('input[placeholder="Enter password"]');
                 const twoFactorField = document.querySelector('input[placeholder="Enter 2FA Verification Code"]');
-                if (usernameField) usernameField.value = username;
-                if (passwordField) passwordField.value = password;
-                if (twoFactorField && code) twoFactorField.value = code;
+                
+                fillField(usernameField, username);
+                fillField(passwordField, password);
+                fillField(twoFactorField, code);
               } else {
                 const usernameField = document.querySelector('input[name="username"], input[name="email"], input[autocomplete="username"]');
                 const passwordField = document.querySelector('input[type="password"], input[name="password"]');
                 const twoFactorField = document.querySelector('input[name="2fa"], input[name="one-time-code"], input[name="totp"]');
-                if (usernameField) usernameField.value = username;
-                if (passwordField) passwordField.value = password;
-                if (twoFactorField && code) twoFactorField.value = code;
+
+                fillField(usernameField, username);
+                fillField(passwordField, password);
+                fillField(twoFactorField, code);
               }
             },
             args: [entry.username, entry.password, totpCode]
