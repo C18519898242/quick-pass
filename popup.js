@@ -82,6 +82,7 @@ document.addEventListener('DOMContentLoaded', () => {
         li.innerHTML = `
           <span><strong>${entry.name}</strong> (${entry.username})</span>
           <div>
+            <button class="fill-btn" data-index="${index}">Fill</button>
             <button class="edit-btn" data-index="${index}">Edit</button>
             <button class="delete-btn" data-index="${index}">Delete</button>
           </div>
@@ -99,8 +100,31 @@ document.addEventListener('DOMContentLoaded', () => {
     } else if (target.classList.contains('edit-btn')) {
       const index = target.getAttribute('data-index');
       startEdit(index);
+    } else if (target.classList.contains('fill-btn')) {
+      const index = target.getAttribute('data-index');
+      fillPassword(index);
     }
   });
+
+  function fillPassword(index) {
+    chrome.storage.sync.get({ passwords: [] }, (data) => {
+      const entry = data.passwords[index];
+      if (entry) {
+        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+          chrome.scripting.executeScript({
+            target: { tabId: tabs[0].id },
+            func: (username, password) => {
+              const usernameField = document.querySelector('input[type="text"], input[type="email"], input:not([type])');
+              const passwordField = document.querySelector('input[type="password"]');
+              if (usernameField) usernameField.value = username;
+              if (passwordField) passwordField.value = password;
+            },
+            args: [entry.username, entry.password]
+          });
+        });
+      }
+    });
+  }
 
   function startEdit(index) {
     chrome.storage.sync.get({ passwords: [] }, (data) => {

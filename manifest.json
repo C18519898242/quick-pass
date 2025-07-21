@@ -5,7 +5,8 @@
   "description": "A simple password manager",
   "permissions": [
     "storage",
-    "activeTab"
+    "activeTab",
+    "scripting"
   ],
   "action": {
     "default_popup": "popup.html",

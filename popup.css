@@ -1,6 +1,6 @@
 body {
   font-family: sans-serif;
-  width: 300px;
+  width: 400px;
   padding: 10px;
 }
 
@@ -50,11 +50,15 @@ li div {
   gap: 5px;
 }
 
-.edit-btn, .delete-btn {
+.edit-btn, .delete-btn, .fill-btn {
   color: white;
   border: none;
   cursor: pointer;
   padding: 5px;
+}
+
+.fill-btn {
+  background-color: #ff9800;
 }
 
 .edit-btn {
