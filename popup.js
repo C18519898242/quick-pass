@@ -217,4 +217,20 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     });
   }
+
+  document.getElementById('export-btn').addEventListener('click', () => {
+    chrome.storage.sync.get({ passwords: [] }, (data) => {
+      const passwordsJson = JSON.stringify(data.passwords, null, 2);
+      const blob = new Blob([passwordsJson], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'passwords.json';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      log('Passwords exported to passwords.json');
+    });
+  });
 });
