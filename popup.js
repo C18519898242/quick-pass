@@ -9,21 +9,50 @@ document.addEventListener('DOMContentLoaded', () => {
 
   log('Popup script loaded.');
 
+  const modal = document.getElementById('add-edit-modal');
   const passwordForm = document.getElementById('passwordForm');
+  const addNewBtn = document.getElementById('add-new-modal-btn');
+  const closeBtn = document.querySelector('.close-btn');
   const passwordList = document.getElementById('passwordList');
-  const nameInput = document.getElementById('name');
+  const environmentInput = document.getElementById('environment');
   const urlInput = document.getElementById('url');
   const usernameInput = document.getElementById('username');
   const passwordInput = document.getElementById('password');
   const roleInput = document.getElementById('role');
   const twoFactorSecretInput = document.getElementById('twoFactorSecret');
   const submitButton = passwordForm.querySelector('button[type="submit"]');
+  const paginationContainer = document.getElementById('pagination-container');
 
   let editingIndex = null;
+  let currentPage = 1;
+  const itemsPerPage = 5;
+
+  function openModal() {
+    modal.style.display = 'block';
+  }
+
+  function closeModal() {
+    modal.style.display = 'none';
+  }
+
+  addNewBtn.addEventListener('click', () => {
+    editingIndex = null;
+    passwordForm.reset();
+    submitButton.textContent = 'Save';
+    openModal();
+  });
+
+  closeBtn.addEventListener('click', closeModal);
+
+  window.addEventListener('click', (event) => {
+    if (event.target == modal) {
+      closeModal();
+    }
+  });
 
   // Restore saved input fields
-  chrome.storage.local.get(['name', 'url', 'username', 'password', 'role', 'twoFactorSecret'], (data) => {
-    if (data.name) nameInput.value = data.name;
+  chrome.storage.local.get(['environment', 'url', 'username', 'password', 'role', 'twoFactorSecret'], (data) => {
+    if (data.environment) environmentInput.value = data.environment;
     if (data.url) urlInput.value = data.url;
     if (data.username) usernameInput.value = data.username;
     if (data.password) passwordInput.value = data.password;
@@ -32,7 +61,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // Save input fields on change
-  nameInput.addEventListener('input', () => chrome.storage.local.set({ name: nameInput.value }));
+  environmentInput.addEventListener('input', () => chrome.storage.local.set({ environment: environmentInput.value }));
   urlInput.addEventListener('input', () => chrome.storage.local.set({ url: urlInput.value }));
   usernameInput.addEventListener('input', () => chrome.storage.local.set({ username: usernameInput.value }));
   passwordInput.addEventListener('input', () => chrome.storage.local.set({ password: passwordInput.value }));
@@ -40,17 +69,17 @@ document.addEventListener('DOMContentLoaded', () => {
   twoFactorSecretInput.addEventListener('input', () => chrome.storage.local.set({ twoFactorSecret: twoFactorSecretInput.value }));
 
   // Load saved passwords
-  loadPasswords();
+  loadPasswords(currentPage);
 
   passwordForm.addEventListener('submit', (e) => {
     e.preventDefault();
-    const name = nameInput.value;
+    const environment = environmentInput.value;
     const url = urlInput.value;
     const username = usernameInput.value;
     const password = passwordInput.value;
     const role = roleInput.value;
     const twoFactorSecret = twoFactorSecretInput.value;
-    const entry = { name, url, username, password, role, twoFactorSecret };
+    const entry = { environment, url, username, password, role, twoFactorSecret };
 
     if (editingIndex !== null) {
       updatePassword(editingIndex, entry);
@@ -59,13 +88,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     resetForm();
+    closeModal();
   });
 
   function resetForm() {
     passwordForm.reset();
     editingIndex = null;
     submitButton.textContent = 'Save';
-    chrome.storage.local.remove(['name', 'url', 'username', 'password', 'role', 'twoFactorSecret']);
+    chrome.storage.local.remove(['environment', 'url', 'username', 'password', 'role', 'twoFactorSecret']);
   }
 
   function updatePassword(index, entry) {
@@ -88,26 +118,66 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  function loadPasswords() {
+  function loadPasswords(page = 1) {
     chrome.storage.sync.get({ passwords: [] }, (data) => {
       passwordList.innerHTML = '';
-      data.passwords.forEach((entry, index) => {
+      const passwords = data.passwords;
+      currentPage = page;
+
+      const start = (currentPage - 1) * itemsPerPage;
+      const end = start + itemsPerPage;
+      const paginatedItems = passwords.slice(start, end);
+
+      paginatedItems.forEach((entry) => {
+        const originalIndex = passwords.indexOf(entry);
         const li = document.createElement('li');
-        // Add a clickable span with data-url attribute
         const roleDisplay = entry.role ? ` [${entry.role}]` : '';
         li.innerHTML = `
           <span class="entry-details" data-url="${entry.url}" style="cursor: pointer;" title="Click to open ${entry.url}">
-            <strong>${entry.name}</strong> (${entry.username})${roleDisplay}
+            <strong>${entry.environment}</strong>${roleDisplay}<br>(${entry.username})
           </span>
           <div>
-            <button class="fill-btn" data-index="${index}">Fill</button>
-            <button class="edit-btn" data-index="${index}">Edit</button>
-            <button class="delete-btn" data-index="${index}">Delete</button>
+            <button class="fill-btn" data-index="${originalIndex}">Fill</button>
+            <button class="edit-btn" data-index="${originalIndex}">Edit</button>
+            <button class="delete-btn" data-index="${originalIndex}">Delete</button>
           </div>
         `;
         passwordList.appendChild(li);
       });
+
+      renderPagination(passwords.length);
     });
+  }
+
+  function renderPagination(totalItems) {
+    paginationContainer.innerHTML = '';
+    const totalPages = Math.ceil(totalItems / itemsPerPage);
+
+    if (totalPages <= 1) return;
+
+    const prevButton = document.createElement('button');
+    prevButton.textContent = 'Previous';
+    prevButton.disabled = currentPage === 1;
+    prevButton.addEventListener('click', () => {
+      if (currentPage > 1) {
+        loadPasswords(currentPage - 1);
+      }
+    });
+    paginationContainer.appendChild(prevButton);
+
+    const pageInfo = document.createElement('span');
+    pageInfo.textContent = ` Page ${currentPage} of ${totalPages} `;
+    paginationContainer.appendChild(pageInfo);
+
+    const nextButton = document.createElement('button');
+    nextButton.textContent = 'Next';
+    nextButton.disabled = currentPage === totalPages;
+    nextButton.addEventListener('click', () => {
+      if (currentPage < totalPages) {
+        loadPasswords(currentPage + 1);
+      }
+    });
+    paginationContainer.appendChild(nextButton);
   }
 
   passwordList.addEventListener('click', (e) => {
@@ -208,11 +278,11 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function startEdit(index) {
-
+    openModal();
     chrome.storage.sync.get({ passwords: [] }, (data) => {
       const entry = data.passwords[index];
       if (entry) {
-        nameInput.value = entry.name;
+        environmentInput.value = entry.environment;
         urlInput.value = entry.url;
         usernameInput.value = entry.username;
         passwordInput.value = entry.password;

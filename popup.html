@@ -6,24 +6,35 @@
 </head>
 <body>
   <h1>Password Manager</h1>
-  <form id="passwordForm">
-    <input type="text" id="name" placeholder="Name" required>
-    <input type="text" id="url" placeholder="URL" required>
-    <input type="text" id="username" placeholder="Username" required>
-    <input type="password" id="password" placeholder="Password" required>
-    <input type="text" id="role" placeholder="Role">
-    <input type="password" id="twoFactorSecret" placeholder="2FA Secret">
-    <button type="submit">Save</button>
-  </form>
-  <hr>
   <h2>Saved Passwords</h2>
   <ul id="passwordList"></ul>
+  <div id="pagination-container"></div>
   <hr>
-  <button id="export-btn">Export JSON</button>
-  <input type="file" id="import-file" accept=".json" style="display: none;">
-  <button id="import-btn">Import JSON</button>
+  <div id="action-buttons">
+    <button id="add-new-modal-btn">Add New</button>
+    <button id="export-btn">Export JSON</button>
+    <input type="file" id="import-file" accept=".json" style="display: none;">
+    <button id="import-btn">Import JSON</button>
+  </div>
   <hr>
   <div id="log-container" style="display: none; height: 100px; overflow-y: scroll; border: 1px solid #ccc; padding: 5px; font-family: monospace; font-size: 12px;"></div>
+
+  <!-- The Modal -->
+  <div id="add-edit-modal" class="modal">
+    <div class="modal-content">
+      <span class="close-btn">&times;</span>
+      <form id="passwordForm">
+        <input type="text" id="environment" placeholder="Environment" required>
+        <input type="text" id="url" placeholder="URL" required>
+        <input type="text" id="username" placeholder="Username" required>
+        <input type="password" id="password" placeholder="Password" required>
+        <input type="text" id="role" placeholder="Role">
+        <input type="password" id="twoFactorSecret" placeholder="2FA Secret">
+        <button type="submit">Save</button>
+      </form>
+    </div>
+  </div>
+
   <script src="totp.js"></script>
   <script src="popup.js"></script>
 </body>
