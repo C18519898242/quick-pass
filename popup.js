@@ -15,17 +15,19 @@ document.addEventListener('DOMContentLoaded', () => {
   const urlInput = document.getElementById('url');
   const usernameInput = document.getElementById('username');
   const passwordInput = document.getElementById('password');
+  const roleInput = document.getElementById('role');
   const twoFactorSecretInput = document.getElementById('twoFactorSecret');
   const submitButton = passwordForm.querySelector('button[type="submit"]');
 
   let editingIndex = null;
 
   // Restore saved input fields
-  chrome.storage.local.get(['name', 'url', 'username', 'password', 'twoFactorSecret'], (data) => {
+  chrome.storage.local.get(['name', 'url', 'username', 'password', 'role', 'twoFactorSecret'], (data) => {
     if (data.name) nameInput.value = data.name;
     if (data.url) urlInput.value = data.url;
     if (data.username) usernameInput.value = data.username;
     if (data.password) passwordInput.value = data.password;
+    if (data.role) roleInput.value = data.role;
     if (data.twoFactorSecret) twoFactorSecretInput.value = data.twoFactorSecret;
   });
 
@@ -34,6 +36,7 @@ document.addEventListener('DOMContentLoaded', () => {
   urlInput.addEventListener('input', () => chrome.storage.local.set({ url: urlInput.value }));
   usernameInput.addEventListener('input', () => chrome.storage.local.set({ username: usernameInput.value }));
   passwordInput.addEventListener('input', () => chrome.storage.local.set({ password: passwordInput.value }));
+  roleInput.addEventListener('input', () => chrome.storage.local.set({ role: roleInput.value }));
   twoFactorSecretInput.addEventListener('input', () => chrome.storage.local.set({ twoFactorSecret: twoFactorSecretInput.value }));
 
   // Load saved passwords
@@ -45,8 +48,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const url = urlInput.value;
     const username = usernameInput.value;
     const password = passwordInput.value;
+    const role = roleInput.value;
     const twoFactorSecret = twoFactorSecretInput.value;
-    const entry = { name, url, username, password, twoFactorSecret };
+    const entry = { name, url, username, password, role, twoFactorSecret };
 
     if (editingIndex !== null) {
       updatePassword(editingIndex, entry);
@@ -61,7 +65,7 @@ document.addEventListener('DOMContentLoaded', () => {
     passwordForm.reset();
     editingIndex = null;
     submitButton.textContent = 'Save';
-    chrome.storage.local.remove(['name', 'url', 'username', 'password', 'twoFactorSecret']);
+    chrome.storage.local.remove(['name', 'url', 'username', 'password', 'role', 'twoFactorSecret']);
   }
 
   function updatePassword(index, entry) {
@@ -90,9 +94,10 @@ document.addEventListener('DOMContentLoaded', () => {
       data.passwords.forEach((entry, index) => {
         const li = document.createElement('li');
         // Add a clickable span with data-url attribute
+        const roleDisplay = entry.role ? ` [${entry.role}]` : '';
         li.innerHTML = `
           <span class="entry-details" data-url="${entry.url}" style="cursor: pointer;" title="Click to open ${entry.url}">
-            <strong>${entry.name}</strong> (${entry.username})
+            <strong>${entry.name}</strong> (${entry.username})${roleDisplay}
           </span>
           <div>
             <button class="fill-btn" data-index="${index}">Fill</button>
@@ -211,6 +216,7 @@ document.addEventListener('DOMContentLoaded', () => {
         urlInput.value = entry.url;
         usernameInput.value = entry.username;
         passwordInput.value = entry.password;
+        roleInput.value = entry.role || '';
         twoFactorSecretInput.value = entry.twoFactorSecret || '';
         
         editingIndex = index;
