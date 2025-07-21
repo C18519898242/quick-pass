@@ -5,16 +5,18 @@ document.addEventListener('DOMContentLoaded', () => {
   const urlInput = document.getElementById('url');
   const usernameInput = document.getElementById('username');
   const passwordInput = document.getElementById('password');
+  const twoFactorSecretInput = document.getElementById('twoFactorSecret');
   const submitButton = passwordForm.querySelector('button[type="submit"]');
 
   let editingIndex = null;
 
   // Restore saved input fields
-  chrome.storage.local.get(['name', 'url', 'username', 'password'], (data) => {
+  chrome.storage.local.get(['name', 'url', 'username', 'password', 'twoFactorSecret'], (data) => {
     if (data.name) nameInput.value = data.name;
     if (data.url) urlInput.value = data.url;
     if (data.username) usernameInput.value = data.username;
     if (data.password) passwordInput.value = data.password;
+    if (data.twoFactorSecret) twoFactorSecretInput.value = data.twoFactorSecret;
   });
 
   // Save input fields on change
@@ -22,6 +24,7 @@ document.addEventListener('DOMContentLoaded', () => {
   urlInput.addEventListener('input', () => chrome.storage.local.set({ url: urlInput.value }));
   usernameInput.addEventListener('input', () => chrome.storage.local.set({ username: usernameInput.value }));
   passwordInput.addEventListener('input', () => chrome.storage.local.set({ password: passwordInput.value }));
+  twoFactorSecretInput.addEventListener('input', () => chrome.storage.local.set({ twoFactorSecret: twoFactorSecretInput.value }));
 
   // Load saved passwords
   loadPasswords();
@@ -32,7 +35,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const url = urlInput.value;
     const username = usernameInput.value;
     const password = passwordInput.value;
-    const entry = { name, url, username, password };
+    const twoFactorSecret = twoFactorSecretInput.value;
+    const entry = { name, url, username, password, twoFactorSecret };
 
     if (editingIndex !== null) {
       updatePassword(editingIndex, entry);
@@ -47,7 +51,7 @@ document.addEventListener('DOMContentLoaded', () => {
     passwordForm.reset();
     editingIndex = null;
     submitButton.textContent = 'Save';
-    chrome.storage.local.remove(['name', 'url', 'username', 'password']);
+    chrome.storage.local.remove(['name', 'url', 'username', 'password', 'twoFactorSecret']);
   }
 
   function updatePassword(index, entry) {
@@ -106,6 +110,7 @@ document.addEventListener('DOMContentLoaded', () => {
         urlInput.value = entry.url;
         usernameInput.value = entry.username;
         passwordInput.value = entry.password;
+        twoFactorSecretInput.value = entry.twoFactorSecret || '';
         
         editingIndex = index;
         submitButton.textContent = 'Update';
