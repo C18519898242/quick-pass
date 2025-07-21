@@ -233,4 +233,58 @@ document.addEventListener('DOMContentLoaded', () => {
       log('Passwords exported to passwords.json');
     });
   });
+
+  const importBtn = document.getElementById('import-btn');
+  const importFile = document.getElementById('import-file');
+
+  importBtn.addEventListener('click', () => {
+    importFile.click();
+  });
+
+  importFile.addEventListener('change', (event) => {
+    const file = event.target.files[0];
+    if (!file) {
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const importedPasswords = JSON.parse(e.target.result);
+        if (!Array.isArray(importedPasswords)) {
+          throw new Error('Invalid JSON format. Expected an array.');
+        }
+
+        chrome.storage.sync.get({ passwords: [] }, (data) => {
+          const existingPasswords = data.passwords;
+          let updatedCount = 0;
+          let addedCount = 0;
+
+          importedPasswords.forEach(importedEntry => {
+            const existingIndex = existingPasswords.findIndex(
+              p => p.url === importedEntry.url && p.username === importedEntry.username
+            );
+
+            if (existingIndex !== -1) {
+              existingPasswords[existingIndex] = importedEntry;
+              updatedCount++;
+            } else {
+              existingPasswords.push(importedEntry);
+              addedCount++;
+            }
+          });
+
+          chrome.storage.sync.set({ passwords: existingPasswords }, () => {
+            loadPasswords();
+            log(`Import successful. Updated: ${updatedCount}, Added: ${addedCount}`);
+          });
+        });
+      } catch (error) {
+        log(`Error importing file: ${error.message}`);
+      }
+    };
+    reader.readAsText(file);
+    // Reset file input
+    event.target.value = null;
+  });
 });
