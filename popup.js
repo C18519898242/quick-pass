@@ -107,18 +107,29 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   function fillPassword(index) {
+    console.log(`[Popup] Fill button clicked for index: ${index}`);
     chrome.storage.sync.get({ passwords: [] }, (data) => {
       const entry = data.passwords[index];
       if (entry) {
+        console.log('[Popup] Found entry:', entry);
         chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+          if (tabs.length === 0) {
+            console.error('[Popup] No active tab found.');
+            return;
+          }
+          const tabId = tabs[0].id;
+          console.log(`[Popup] Active tab found: ${tabId}`);
+
           let totpCode = '';
           if (entry.twoFactorSecret) {
             const totp = new TOTP(entry.twoFactorSecret);
             totpCode = totp.generate();
+            console.log(`[Popup] Generated TOTP code: ${totpCode}`);
           }
 
+          console.log('[Popup] Executing script...');
           chrome.scripting.executeScript({
-            target: { tabId: tabs[0].id },
+            target: { tabId: tabId },
             func: (username, password, code) => {
               console.log('--- Password Fill Script Executing ---');
               console.log('Attempting to fill with:', { username, password, code });
@@ -169,8 +180,16 @@ document.addEventListener('DOMContentLoaded', () => {
               console.log('--- Script Finished ---');
             },
             args: [entry.username, entry.password, totpCode]
+          }, () => {
+            if (chrome.runtime.lastError) {
+              console.error(`[Popup] Script injection failed: ${chrome.runtime.lastError.message}`);
+            } else {
+              console.log('[Popup] Script injected successfully.');
+            }
           });
         });
+      } else {
+        console.error(`[Popup] No entry found for index: ${index}`);
       }
     });
   }
