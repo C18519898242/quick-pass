@@ -133,9 +133,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
           let totpCode = '';
           if (entry.twoFactorSecret) {
-            const totp = new TOTP(entry.twoFactorSecret);
-            totpCode = totp.generate();
-            log(`Generated TOTP code: ${totpCode}`);
+            try {
+              const totp = new OTPAuth.TOTP({
+                secret: entry.twoFactorSecret
+              });
+              totpCode = totp.generate();
+              log(`Generated TOTP code: ${totpCode}`);
+            } catch (error) {
+              log(`Error generating TOTP code: ${error.message}`);
+            }
           }
 
           log('Executing script...');
