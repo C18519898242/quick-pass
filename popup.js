@@ -89,8 +89,11 @@ document.addEventListener('DOMContentLoaded', () => {
       passwordList.innerHTML = '';
       data.passwords.forEach((entry, index) => {
         const li = document.createElement('li');
+        // Add a clickable span with data-url attribute
         li.innerHTML = `
-          <span><strong>${entry.name}</strong> (${entry.username})</span>
+          <span class="entry-details" data-url="${entry.url}" style="cursor: pointer;" title="Click to open ${entry.url}">
+            <strong>${entry.name}</strong> (${entry.username})
+          </span>
           <div>
             <button class="fill-btn" data-index="${index}">Fill</button>
             <button class="edit-btn" data-index="${index}">Edit</button>
@@ -103,9 +106,17 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   passwordList.addEventListener('click', (e) => {
-
     const target = e.target;
-    if (target.classList.contains('delete-btn')) {
+    const entryDetails = target.closest('.entry-details');
+
+    if (entryDetails) {
+      const url = entryDetails.getAttribute('data-url');
+      if (url) {
+        // Ensure the URL has a scheme
+        const fullUrl = url.startsWith('http://') || url.startsWith('https://') ? url : `https://${url}`;
+        chrome.tabs.create({ url: fullUrl });
+      }
+    } else if (target.classList.contains('delete-btn')) {
       const index = target.getAttribute('data-index');
       deletePassword(index);
     } else if (target.classList.contains('edit-btn')) {
