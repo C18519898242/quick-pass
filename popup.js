@@ -255,7 +255,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
               }
 
-              if (window.location.hostname === 'dev-camp-admin.mce.sg') {
+              if (window.location.hostname.includes('camp-admin')) {
                 const usernameField = document.querySelector('input[placeholder="Enter email address"]');
                 const passwordField = document.querySelector('input[placeholder="Enter password"]');
                 const twoFactorField = document.querySelector('input[placeholder="Enter 2FA Verification Code"]');
