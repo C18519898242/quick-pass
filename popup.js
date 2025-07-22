@@ -148,7 +148,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <strong>${entry.environment}</strong>${roleDisplay}<br>(${entry.username})
           </span>
           <div>
-            <button class="fill-btn" data-index="${originalIndex}">Fill</button>
+            <button class="fill-btn" data-index="${originalIndex}">Sign in</button>
             <button class="edit-btn" data-index="${originalIndex}">Edit</button>
             <button class="delete-btn" data-index="${originalIndex}">Delete</button>
           </div>
@@ -263,6 +263,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 fillField(usernameField, username);
                 fillField(passwordField, password);
                 fillField(twoFactorField, code);
+
+                const signInButton = Array.from(document.querySelectorAll('button')).find(button => button.textContent.trim() === 'Sign in');
+                if (signInButton) {
+                    signInButton.click();
+                }
               } else {
                 const usernameField = document.querySelector('input[name="username"], input[name="email"], input[autocomplete="username"]');
                 const passwordField = document.querySelector('input[type="password"], input[name="password"]');
