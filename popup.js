@@ -226,15 +226,15 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   function fillPassword(index) {
-    log(`Fill button clicked for index: ${index}`);
+    log(`--- Initiating Login for index: ${index} ---`);
     chrome.storage.sync.get({ passwords: [] }, (data) => {
       const entry = data.passwords[index];
       if (!entry) {
-        log(`ERROR: No entry found for index: ${index}`);
+        log(`[ERROR] No entry found for index: ${index}`);
         return;
       }
 
-      log('Found entry: ' + JSON.stringify(entry));
+      log(`[DATA] Found entry: ${JSON.stringify(entry)}`);
 
       const executeFillScript = (tabId) => {
         let totpCode = '000000';
@@ -248,7 +248,7 @@ document.addEventListener('DOMContentLoaded', () => {
           }
         }
 
-        log('Executing script with retry mechanism...');
+        log('[ACTION] Executing script with retry mechanism...');
         chrome.scripting.executeScript({
           target: { tabId: tabId },
           func: (username, password, code) => {
@@ -301,11 +301,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
               }
               const strategy = siteStrategies[activeStrategyKey];
+              console.log(`[Content] Using strategy: ${activeStrategyKey}`);
 
               function fillField(selector, value) {
                 if (!selector || !value) return false;
                 const element = document.querySelector(selector);
                 if (element) {
+                  console.log(`[Content] Filling field: ${selector}`);
                   element.focus();
                   element.value = value;
                   element.dispatchEvent(new Event('input', { bubbles: true }));
@@ -313,6 +315,7 @@ document.addEventListener('DOMContentLoaded', () => {
                   element.blur();
                   return true;
                 }
+                console.log(`[Content] Field not found: ${selector}`);
                 return false;
               }
 
@@ -320,13 +323,15 @@ document.addEventListener('DOMContentLoaded', () => {
               const passwordField = document.querySelector(strategy.password);
 
               if (!usernameField || !passwordField) {
-                return false; // Essential fields not found
+                console.log('[Content] Essential fields not found.');
+                return false;
               }
 
               fillField(strategy.username, username);
               fillField(strategy.password, password);
               fillField(strategy.twoFactor, code);
 
+              console.log('[Content] Attempting to submit.');
               return strategy.submit();
             };
 
@@ -350,37 +355,44 @@ document.addEventListener('DOMContentLoaded', () => {
           args: [entry.username, entry.password, totpCode]
         }, () => {
           if (chrome.runtime.lastError) {
-            log(`ERROR: Script injection failed: ${chrome.runtime.lastError.message}`);
+            log(`[ERROR] Script injection failed: ${chrome.runtime.lastError.message}`);
           } else {
-            log('Script injected successfully.');
+            log('[SUCCESS] Script injected successfully.');
           }
         });
       };
 
       chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
         if (tabs.length === 0) {
-          log('ERROR: No active tab found.');
+          log('[ERROR] No active tab found.');
           return;
         }
         const tab = tabs[0];
         const tabId = tab.id;
-        log(`Active tab found: ${tabId}, URL: ${tab.url}`);
+
+        if (!tab || !tab.url) {
+          log('[ERROR] Could not get URL from active tab. Please try again in a moment.');
+          return;
+        }
+        log(`[INFO] Active tab found: ${tabId}, URL: ${tab.url}`);
 
         const fullEntryUrl = entry.url.startsWith('http') ? entry.url : `https://${entry.url}`;
+        log(`[INFO] Target URL for entry: ${fullEntryUrl}`);
         
         try {
           const entryUrl = new URL(fullEntryUrl);
           const tabUrl = new URL(tab.url);
 
           if (entryUrl.hostname !== tabUrl.hostname) {
-            log(`URL mismatch. Storing pending login and navigating to ${fullEntryUrl}`);
+            log(`[ACTION] URL mismatch. Storing pending login and navigating to ${fullEntryUrl}`);
             let totpCode = '000000';
             if (entry.twoFactorSecret) {
               try {
                 const totp = new OTPAuth.TOTP({ secret: entry.twoFactorSecret });
                 totpCode = totp.generate();
+                log(`[INFO] Generated TOTP: ${totpCode}`);
               } catch (error) {
-                log(`Error generating TOTP code: ${error.message}`);
+                log(`[ERROR] Generating TOTP failed: ${error.message}`);
               }
             }
             const pendingLogin = {
@@ -389,21 +401,28 @@ document.addEventListener('DOMContentLoaded', () => {
               password: entry.password,
               totpCode: totpCode
             };
-            // Clear any old pending login before setting a new one
+            log(`[ACTION] Clearing old pending login and setting new one.`);
             chrome.storage.local.remove('pendingLogin', () => {
                 chrome.storage.local.set({ pendingLogin }, () => {
-                    chrome.tabs.update(tabId, { url: fullEntryUrl });
+                    chrome.tabs.update(tabId, { url: fullEntryUrl }, () => {
+                        log(`[SUCCESS] Navigation initiated.`);
+                        // Visually disable the button in the UI
+                        const button = document.querySelector(`.fill-btn[data-index="${index}"]`);
+                        if (button) {
+                            button.textContent = 'Redirecting...';
+                            button.disabled = true;
+                        }
+                    });
                 });
             });
           } else {
-            log('URL matches. Clearing any pending login and executing script directly.');
-            // Clear any stale pending login data before executing
+            log('[ACTION] URL matches. Clearing any pending login and executing script directly.');
             chrome.storage.local.remove('pendingLogin', () => {
                 executeFillScript(tabId);
             });
           }
         } catch (error) {
-          log(`Invalid URL encountered: ${error.message}`);
+          log(`[ERROR] Invalid URL encountered: ${error.message}`);
         }
       });
     });
