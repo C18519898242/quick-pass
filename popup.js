@@ -266,7 +266,9 @@ document.addEventListener('DOMContentLoaded', () => {
               }
 
               let success = false;
-              if (window.location.hostname.includes('camp-admin')) {
+              const isAdminPage = /camp-admin|camp\.test/.test(window.location.hostname);
+
+              if (isAdminPage) {
                 const usernameField = document.querySelector('input[placeholder="Enter email address"]');
                 const passwordField = document.querySelector('input[placeholder="Enter password"]');
                 const twoFactorField = document.querySelector('input[placeholder="Enter 2FA Verification Code"]');
