@@ -12,8 +12,49 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
         chrome.scripting.executeScript({
           target: { tabId: tabId },
           func: (username, password, code) => {
-            const fillAndLogin = () => {
-              function fillField(element, value) {
+            const fillAndLoginWithStrategy = () => {
+              const siteStrategies = {
+                'camp-admin': {
+                  username: 'input[placeholder="Enter email address"]',
+                  password: 'input[placeholder="Enter password"]',
+                  twoFactor: 'input[placeholder="Enter 2FA Verification Code"]',
+                  submit: () => {
+                    const btn = Array.from(document.querySelectorAll('button')).find(b => b.textContent.trim() === 'Sign in');
+                    if (btn) btn.click();
+                    return !!btn;
+                  }
+                },
+                'camp.test': {
+                  username: 'input[placeholder="Enter email address"]',
+                  password: 'input[placeholder="Enter password"]',
+                  twoFactor: 'input[placeholder="Enter 2FA Verification Code"]',
+                  submit: () => {
+                    const btn = Array.from(document.querySelectorAll('button')).find(b => b.textContent.trim() === 'Sign in');
+                    if (btn) btn.click();
+                    return !!btn;
+                  }
+                },
+                'default': {
+                  username: 'input[name="username"], input[name="email"], input[autocomplete="username"]',
+                  password: 'input[type="password"], input[name="password"]',
+                  twoFactor: 'input[name="2fa"], input[name="one-time-code"], input[name="totp"]',
+                  submit: () => true // Assume success, no specific button to click
+                }
+              };
+
+              const hostname = window.location.hostname;
+              let activeStrategyKey = 'default';
+              for (const key in siteStrategies) {
+                if (hostname.includes(key)) {
+                  activeStrategyKey = key;
+                  break;
+                }
+              }
+              const strategy = siteStrategies[activeStrategyKey];
+
+              function fillField(selector, value) {
+                if (!selector || !value) return false;
+                const element = document.querySelector(selector);
                 if (element) {
                   element.focus();
                   element.value = value;
@@ -25,38 +66,18 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
                 return false;
               }
 
-              let success = false;
-              const isAdminPage = /camp-admin|camp\.test/.test(window.location.hostname);
+              const usernameField = document.querySelector(strategy.username);
+              const passwordField = document.querySelector(strategy.password);
 
-              if (isAdminPage) {
-                const usernameField = document.querySelector('input[placeholder="Enter email address"]');
-                const passwordField = document.querySelector('input[placeholder="Enter password"]');
-                const twoFactorField = document.querySelector('input[placeholder="Enter 2FA Verification Code"]');
-                
-                if (usernameField && passwordField) { // 2FA field might not be present initially
-                  fillField(usernameField, username);
-                  fillField(passwordField, password);
-                  fillField(twoFactorField, code);
-
-                  const signInButton = Array.from(document.querySelectorAll('button')).find(button => button.textContent.trim() === 'Sign in');
-                  if (signInButton) {
-                      signInButton.click();
-                      success = true;
-                  }
-                }
-              } else {
-                const usernameField = document.querySelector('input[name="username"], input[name="email"], input[autocomplete="username"]');
-                const passwordField = document.querySelector('input[type="password"], input[name="password"]');
-                
-                if (usernameField && passwordField) {
-                  const twoFactorField = document.querySelector('input[name="2fa"], input[name="one-time-code"], input[name="totp"]');
-                  fillField(usernameField, username);
-                  fillField(passwordField, password);
-                  fillField(twoFactorField, code);
-                  success = true; // Assume success if fields are filled, as login button is generic
-                }
+              if (!usernameField || !passwordField) {
+                return false; // Essential fields not found
               }
-              return success;
+
+              fillField(strategy.username, username);
+              fillField(strategy.password, password);
+              fillField(strategy.twoFactor, code);
+
+              return strategy.submit();
             };
 
             // Retry mechanism
@@ -64,7 +85,7 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
             const maxAttempts = 10; // 10 * 500ms = 5 seconds
             const interval = setInterval(() => {
               console.log(`[Content Script] Attempt ${attempts + 1} to fill login form.`);
-              if (fillAndLogin()) {
+              if (fillAndLoginWithStrategy()) {
                 console.log('[Content Script] Successfully filled and submitted.');
                 clearInterval(interval);
               } else {
