@@ -228,7 +228,7 @@ document.addEventListener('DOMContentLoaded', () => {
           const tabId = tabs[0].id;
           log(`Active tab found: ${tabId}`);
 
-          let totpCode = '';
+          let totpCode = '000000';
           if (entry.twoFactorSecret) {
             try {
               const totp = new OTPAuth.TOTP({
