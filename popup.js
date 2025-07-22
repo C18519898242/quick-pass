@@ -229,78 +229,115 @@ document.addEventListener('DOMContentLoaded', () => {
     log(`Fill button clicked for index: ${index}`);
     chrome.storage.sync.get({ passwords: [] }, (data) => {
       const entry = data.passwords[index];
-      if (entry) {
-        log('Found entry: ' + JSON.stringify(entry));
-        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-          if (tabs.length === 0) {
-            log('ERROR: No active tab found.');
-            return;
-          }
-          const tabId = tabs[0].id;
-          log(`Active tab found: ${tabId}`);
-
-          let totpCode = '000000';
-          if (entry.twoFactorSecret) {
-            try {
-              const totp = new OTPAuth.TOTP({
-                secret: entry.twoFactorSecret
-              });
-              totpCode = totp.generate();
-              log(`Generated TOTP code: ${totpCode}`);
-            } catch (error) {
-              log(`Error generating TOTP code: ${error.message}`);
-            }
-          }
-
-          log('Executing script...');
-          chrome.scripting.executeScript({
-            target: { tabId: tabId },
-            func: (username, password, code) => {
-              function fillField(element, value) {
-                if (element) {
-                  element.focus();
-                  element.value = value;
-                  element.dispatchEvent(new Event('input', { bubbles: true }));
-                  element.dispatchEvent(new Event('change', { bubbles: true }));
-                  element.blur();
-                }
-              }
-
-              if (window.location.hostname.includes('camp-admin')) {
-                const usernameField = document.querySelector('input[placeholder="Enter email address"]');
-                const passwordField = document.querySelector('input[placeholder="Enter password"]');
-                const twoFactorField = document.querySelector('input[placeholder="Enter 2FA Verification Code"]');
-                
-                fillField(usernameField, username);
-                fillField(passwordField, password);
-                fillField(twoFactorField, code);
-
-                const signInButton = Array.from(document.querySelectorAll('button')).find(button => button.textContent.trim() === 'Sign in');
-                if (signInButton) {
-                    signInButton.click();
-                }
-              } else {
-                const usernameField = document.querySelector('input[name="username"], input[name="email"], input[autocomplete="username"]');
-                const passwordField = document.querySelector('input[type="password"], input[name="password"]');
-                const twoFactorField = document.querySelector('input[name="2fa"], input[name="one-time-code"], input[name="totp"]');
-
-                fillField(usernameField, username);
-                fillField(passwordField, password);
-                fillField(twoFactorField, code);
-              }
-            },
-            args: [entry.username, entry.password, totpCode]
-          }, () => {
-            if (chrome.runtime.lastError) {
-              log(`ERROR: Script injection failed: ${chrome.runtime.lastError.message}`);
-            } else {
-              log('Script injected successfully.');
-            }
-          });
-        });
-      } else {
+      if (!entry) {
         log(`ERROR: No entry found for index: ${index}`);
+        return;
       }
+
+      log('Found entry: ' + JSON.stringify(entry));
+
+      const executeFillScript = (tabId) => {
+        let totpCode = '000000';
+        if (entry.twoFactorSecret) {
+          try {
+            const totp = new OTPAuth.TOTP({ secret: entry.twoFactorSecret });
+            totpCode = totp.generate();
+            log(`Generated TOTP code: ${totpCode}`);
+          } catch (error) {
+            log(`Error generating TOTP code: ${error.message}`);
+          }
+        }
+
+        log('Executing script...');
+        chrome.scripting.executeScript({
+          target: { tabId: tabId },
+          func: (username, password, code) => {
+            function fillField(element, value) {
+              if (element) {
+                element.focus();
+                element.value = value;
+                element.dispatchEvent(new Event('input', { bubbles: true }));
+                element.dispatchEvent(new Event('change', { bubbles: true }));
+                element.blur();
+              }
+            }
+
+            if (window.location.hostname.includes('camp-admin')) {
+              const usernameField = document.querySelector('input[placeholder="Enter email address"]');
+              const passwordField = document.querySelector('input[placeholder="Enter password"]');
+              const twoFactorField = document.querySelector('input[placeholder="Enter 2FA Verification Code"]');
+              
+              fillField(usernameField, username);
+              fillField(passwordField, password);
+              fillField(twoFactorField, code);
+
+              const signInButton = Array.from(document.querySelectorAll('button')).find(button => button.textContent.trim() === 'Sign in');
+              if (signInButton) {
+                  signInButton.click();
+              }
+            } else {
+              const usernameField = document.querySelector('input[name="username"], input[name="email"], input[autocomplete="username"]');
+              const passwordField = document.querySelector('input[type="password"], input[name="password"]');
+              const twoFactorField = document.querySelector('input[name="2fa"], input[name="one-time-code"], input[name="totp"]');
+
+              fillField(usernameField, username);
+              fillField(passwordField, password);
+              fillField(twoFactorField, code);
+            }
+          },
+          args: [entry.username, entry.password, totpCode]
+        }, () => {
+          if (chrome.runtime.lastError) {
+            log(`ERROR: Script injection failed: ${chrome.runtime.lastError.message}`);
+          } else {
+            log('Script injected successfully.');
+          }
+        });
+      };
+
+      chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        if (tabs.length === 0) {
+          log('ERROR: No active tab found.');
+          return;
+        }
+        const tab = tabs[0];
+        const tabId = tab.id;
+        log(`Active tab found: ${tabId}, URL: ${tab.url}`);
+
+        const fullEntryUrl = entry.url.startsWith('http') ? entry.url : `https://${entry.url}`;
+        
+        try {
+          const entryUrl = new URL(fullEntryUrl);
+          const tabUrl = new URL(tab.url);
+
+          if (entryUrl.hostname !== tabUrl.hostname) {
+            log(`URL mismatch. Storing pending login and navigating to ${fullEntryUrl}`);
+            let totpCode = '000000';
+            if (entry.twoFactorSecret) {
+              try {
+                const totp = new OTPAuth.TOTP({ secret: entry.twoFactorSecret });
+                totpCode = totp.generate();
+              } catch (error) {
+                log(`Error generating TOTP code: ${error.message}`);
+              }
+            }
+            const pendingLogin = {
+              url: fullEntryUrl,
+              username: entry.username,
+              password: entry.password,
+              totpCode: totpCode
+            };
+            chrome.storage.local.set({ pendingLogin }, () => {
+              chrome.tabs.update(tabId, { url: fullEntryUrl });
+            });
+          } else {
+            log('URL matches. Executing script directly.');
+            executeFillScript(tabId);
+          }
+        } catch (error) {
+          log(`Invalid URL encountered: ${error.message}`);
+        }
+      });
     });
   }
 
