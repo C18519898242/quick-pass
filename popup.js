@@ -264,7 +264,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     return !!btn;
                   }
                 },
-                'camp.test': {
+                'camp.': {
                   username: 'input[placeholder="Please enter email address"]',
                   password: 'input[placeholder="Please enter password"]',
                   twoFactor: 'input[placeholder="Please enter your 2FA code"]',
