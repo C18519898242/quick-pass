@@ -25,11 +25,11 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
                   }
                 },
                 'camp.test': {
-                  username: 'input[placeholder="Enter email address"]',
-                  password: 'input[placeholder="Enter password"]',
-                  twoFactor: 'input[placeholder="Enter 2FA Verification Code"]',
+                  username: 'input[placeholder="Please enter email address"]',
+                  password: 'input[placeholder="Please enter password"]',
+                  twoFactor: 'input[placeholder="Please enter your 2FA code"]',
                   submit: () => {
-                    const btn = Array.from(document.querySelectorAll('button')).find(b => b.textContent.trim() === 'Sign in');
+                    const btn = Array.from(document.querySelectorAll('button')).find(b => b.textContent.trim() === 'Login');
                     if (btn) btn.click();
                     return !!btn;
                   }
