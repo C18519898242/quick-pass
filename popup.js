@@ -264,6 +264,16 @@ document.addEventListener('DOMContentLoaded', () => {
                     return !!btn;
                   }
                 },
+                'camp-psp': {
+                  username: 'input[placeholder="Enter email address"]',
+                  password: 'input[placeholder="Enter password"]',
+                  twoFactor: 'input[placeholder="Enter 2FA Verification Code"]',
+                  submit: () => {
+                    const btn = Array.from(document.querySelectorAll('button')).find(b => b.textContent.trim() === 'Sign in');
+                    if (btn) btn.click();
+                    return !!btn;
+                  }
+                },
                 'camp.': {
                   username: 'input[placeholder="Please enter email address"]',
                   password: 'input[placeholder="Please enter password"]',
