@@ -16,6 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const modalTitle = document.getElementById('modal-title');
   const passwordList = document.getElementById('passwordList');
   const filterInput = document.getElementById('filter-input');
+  const clearFilterBtn = document.getElementById('clear-filter-btn');
   const environmentInput = document.getElementById('environment');
   const urlInput = document.getElementById('url');
   const usernameInput = document.getElementById('username');
@@ -54,13 +55,18 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // Restore saved input fields
-  chrome.storage.local.get(['environment', 'url', 'username', 'password', 'role', 'twoFactorSecret'], (data) => {
+  chrome.storage.local.get(['environment', 'url', 'username', 'password', 'role', 'twoFactorSecret', 'filter'], (data) => {
     if (data.environment) environmentInput.value = data.environment;
     if (data.url) urlInput.value = data.url;
     if (data.username) usernameInput.value = data.username;
     if (data.password) passwordInput.value = data.password;
     if (data.role) roleInput.value = data.role;
     if (data.twoFactorSecret) twoFactorSecretInput.value = data.twoFactorSecret;
+    if (data.filter) {
+      filterInput.value = data.filter;
+    }
+    // Load passwords with the restored filter
+    loadPasswords(currentPage, filterInput.value);
   });
 
   // Save input fields on change
@@ -71,11 +77,16 @@ document.addEventListener('DOMContentLoaded', () => {
   roleInput.addEventListener('input', () => chrome.storage.local.set({ role: roleInput.value }));
   twoFactorSecretInput.addEventListener('input', () => chrome.storage.local.set({ twoFactorSecret: twoFactorSecretInput.value }));
 
-  // Load saved passwords
-  loadPasswords(currentPage);
-
   filterInput.addEventListener('input', () => {
-    loadPasswords(1, filterInput.value);
+    const filterValue = filterInput.value;
+    chrome.storage.local.set({ filter: filterValue });
+    loadPasswords(1, filterValue);
+  });
+
+  clearFilterBtn.addEventListener('click', () => {
+    filterInput.value = '';
+    chrome.storage.local.remove('filter');
+    loadPasswords(1, '');
   });
 
   passwordForm.addEventListener('submit', (e) => {
